@@ -53,7 +53,7 @@ set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
 set(INCLUDE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/include")
 
-add_executable(dim2mon src/Dim2Mon.cxx)
+add_executable(dim2mon src/Dim2Mon.cxx src/main.cxx)
 target_link_libraries(dim2mon
   PRIVATE
     AliceO2::Monitoring

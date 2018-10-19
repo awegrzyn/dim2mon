@@ -1,37 +1,31 @@
 #include "Dim2Mon.h"
 #include <Monitoring/MonitoringFactory.h>
-#include <boost/program_options.hpp>
 #include <chrono>
 #include <iostream>
 #include <thread>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
 
 using namespace o2::monitoring;
 
-
 Dim2Mon::Dim2Mon(const std::string& url)
 {
-  service = new DimUpdatedInfo("/DCS/TEMPERATURE", -1, this);
+  std::vector<std::string> serviceNames;
+  boost::split(serviceNames, serviceString, boost::is_any_of(","), boost::token_compress_on);
+  for (const std::string& name : serviceNames) {
+    services.emplace_back(new DimUpdatedInfo(name.c_str(), -1, this));
+  }
   monitoring = MonitoringFactory::Get(url);
 }
 
 void Dim2Mon::infoHandler() { 
   DimInfo *curr = getInfo();
-  monitoring->send({curr->getInt(), std::string(curr->getName())});
-  delete curr;
+  std::string name = std::string(curr->getName());
+  std::string type;
+  (name.front() == 'T') ? type = "temperature" : type = "humidity";
+  monitoring->send(Metric{curr->getFloat(), std::string(curr->getName())}.addTags({{"type", type}}));
 }
 
-int main(int argc, char* argv[]) {
-   boost::program_options::options_description desc("Allowed options");
-  desc.add_options()
-    ("url", boost::program_options::value<std::string>()->required(), "Monitoring URL")
-  ;
-
-  boost::program_options::variables_map vm;
-  boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
-  boost::program_options::notify(vm);
-  auto bridge = std::make_unique<Dim2Mon>(vm["url"].as<std::string>());
-  while(1) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
-  }
-  return 0;
+void Dim2Mon::addTag(const std::string& name, const std::string& value) {
+  monitoring->addGlobalTag(name, value);
 }
